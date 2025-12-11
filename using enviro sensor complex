@@ -1,0 +1,239 @@
+#Waveshare Pico Environment Sensor (WAV-20232) - Simple Data Reader
+#Reads all sensors and prints the data in a continuous loop
+
+
+from machine import Pin, I2C
+import time
+
+# I2C Setup (GP20=SDA, GP21=SCL - Waveshare default configuration)
+i2c = I2C(0, scl=Pin(21), sda=Pin(20), freq=400000)
+
+# Sensor I2C Addresses
+TSL2591_ADDR = 0x29   # Light sensor (visible + IR)
+BME280_ADDR = 0x76    # Temperature, humidity, pressure
+ICM20948_ADDR = 0x68  # Accelerometer/gyro/magnetometer
+LTR390_ADDR = 0x53    # UV sensor
+SGP40_ADDR = 0x59     # VOC/Air quality
+
+# ==================== TSL2591 Light Sensor ====================
+def tsl2591_init():
+    i2c.writeto_mem(TSL2591_ADDR, 0xA0, b'\x03')  # Enable
+    i2c.writeto_mem(TSL2591_ADDR, 0xA1, b'\x01')  # Medium gain, 100ms
+
+def read_tsl2591():
+    data = i2c.readfrom_mem(TSL2591_ADDR, 0xB4, 4)
+    visible = data[1] << 8 | data[0]
+    ir = data[3] << 8 | data[2]
+    return visible, ir
+
+# ==================== BME280 Temp/Humidity/Pressure ====================
+def bme280_init():
+    i2c.writeto_mem(BME280_ADDR, 0xF2, b'\x01')  # Humidity oversampling
+    i2c.writeto_mem(BME280_ADDR, 0xF4, b'\x27')  # Temp/Press oversampling + normal mode
+
+def read_bme280_calibration():
+    cal = i2c.readfrom_mem(BME280_ADDR, 0x88, 24)
+    cal2 = i2c.readfrom_mem(BME280_ADDR, 0xE1, 7)
+    
+    dig_T1 = cal[1] << 8 | cal[0]
+    dig_T2 = cal[3] << 8 | cal[2]
+    if dig_T2 > 32767: dig_T2 -= 65536
+    dig_T3 = cal[5] << 8 | cal[4]
+    if dig_T3 > 32767: dig_T3 -= 65536
+    
+    dig_P1 = cal[7] << 8 | cal[6]
+    dig_P2 = cal[9] << 8 | cal[8]
+    if dig_P2 > 32767: dig_P2 -= 65536
+    dig_P3 = cal[11] << 8 | cal[10]
+    if dig_P3 > 32767: dig_P3 -= 65536
+    dig_P4 = cal[13] << 8 | cal[12]
+    if dig_P4 > 32767: dig_P4 -= 65536
+    dig_P5 = cal[15] << 8 | cal[14]
+    if dig_P5 > 32767: dig_P5 -= 65536
+    dig_P6 = cal[17] << 8 | cal[16]
+    if dig_P6 > 32767: dig_P6 -= 65536
+    dig_P7 = cal[19] << 8 | cal[18]
+    if dig_P7 > 32767: dig_P7 -= 65536
+    dig_P8 = cal[21] << 8 | cal[20]
+    if dig_P8 > 32767: dig_P8 -= 65536
+    dig_P9 = cal[23] << 8 | cal[22]
+    if dig_P9 > 32767: dig_P9 -= 65536
+    
+    dig_H1 = i2c.readfrom_mem(BME280_ADDR, 0xA1, 1)[0]
+    dig_H2 = cal2[1] << 8 | cal2[0]
+    if dig_H2 > 32767: dig_H2 -= 65536
+    dig_H3 = cal2[2]
+    dig_H4 = (cal2[3] << 4) | (cal2[4] & 0x0F)
+    if dig_H4 > 32767: dig_H4 -= 65536
+    dig_H5 = (cal2[5] << 4) | (cal2[4] >> 4)
+    if dig_H5 > 32767: dig_H5 -= 65536
+    dig_H6 = cal2[6]
+    if dig_H6 > 127: dig_H6 -= 256
+    
+    return (dig_T1, dig_T2, dig_T3, dig_P1, dig_P2, dig_P3, dig_P4, dig_P5, dig_P6, dig_P7, dig_P8, dig_P9, dig_H1, dig_H2, dig_H3, dig_H4, dig_H5, dig_H6)
+
+def read_bme280(cal):
+    data = i2c.readfrom_mem(BME280_ADDR, 0xF7, 8)
+    
+    adc_p = (data[0] << 12) | (data[1] << 4) | (data[2] >> 4)
+    adc_t = (data[3] << 12) | (data[4] << 4) | (data[5] >> 4)
+    adc_h = (data[6] << 8) | data[7]
+    
+    # Temperature
+    var1 = ((adc_t >> 3) - (cal[0] << 1)) * cal[1] >> 11
+    var2 = (((adc_t >> 4) - cal[0]) * ((adc_t >> 4) - cal[0]) >> 12) * cal[2] >> 14
+    t_fine = var1 + var2
+    temp = (t_fine * 5 + 128) >> 8
+    temp = temp / 100.0
+    
+    # Pressure
+    var1 = t_fine - 128000
+    var2 = var1 * var1 * cal[8]
+    var2 = var2 + ((var1 * cal[7]) << 17)
+    var2 = var2 + (cal[6] << 35)
+    var1 = ((var1 * var1 * cal[5]) >> 8) + ((var1 * cal[4]) << 12)
+    var1 = ((1 << 47) + var1) * cal[3] >> 33
+    if var1 == 0:
+        pressure = 0
+    else:
+        p = 1048576 - adc_p
+        p = (((p << 31) - var2) * 3125) // var1
+        var1 = (cal[11] * (p >> 13) * (p >> 13)) >> 25
+        var2 = (cal[10] * p) >> 19
+        p = ((p + var1 + var2) >> 8) + (cal[9] << 4)
+        pressure = p / 25600.0
+    
+    # Humidity
+    h = t_fine - 76800
+    h = (((((adc_h << 14) - (cal[15] << 20) - (cal[16] * h)) + 16384) >> 15) * 
+         (((((((h * cal[17]) >> 10) * (((h * cal[14]) >> 11) + 32768)) >> 10) + 2097152) * 
+         cal[13] + 8192) >> 14))
+    h = h - (((((h >> 15) * (h >> 15)) >> 7) * cal[12]) >> 4)
+    h = 0 if h < 0 else h
+    h = 419430400 if h > 419430400 else h
+    humidity = h >> 12
+    humidity = humidity / 1024.0
+    
+    return temp, pressure, humidity
+
+# ==================== LTR390 UV Sensor ====================
+def ltr390_init():
+    i2c.writeto_mem(LTR390_ADDR, 0x00, b'\x02')  # Enable UV mode
+    i2c.writeto_mem(LTR390_ADDR, 0x04, b'\x02')  # Gain x3
+    i2c.writeto_mem(LTR390_ADDR, 0x05, b'\x22')  # Resolution 18-bit, 100ms
+
+def read_ltr390():
+    data = i2c.readfrom_mem(LTR390_ADDR, 0x10, 3)
+    uv = data[2] << 16 | data[1] << 8 | data[0]
+    return uv
+
+# ==================== SGP40 VOC Sensor ====================
+def read_sgp40():
+    i2c.writeto(SGP40_ADDR, b'\x26\x0F\x80\x00\xA2\x66\x66\x93')
+    time.sleep(0.03)
+    data = i2c.readfrom(SGP40_ADDR, 3)
+    voc_raw = data[0] << 8 | data[1]
+    return voc_raw
+
+# ==================== ICM20948 Accelerometer ====================
+def icm20948_init():
+    i2c.writeto_mem(ICM20948_ADDR, 0x06, b'\x01')  # Reset
+    time.sleep(0.1)
+    i2c.writeto_mem(ICM20948_ADDR, 0x06, b'\x00')  # Auto select clock
+    i2c.writeto_mem(ICM20948_ADDR, 0x07, b'\x00')  # Enable all sensors
+
+def read_icm20948_accel():
+    data = i2c.readfrom_mem(ICM20948_ADDR, 0x2D, 6)
+    ax = (data[0] << 8 | data[1])
+    if ax > 32767: ax -= 65536
+    ay = (data[2] << 8 | data[3])
+    if ay > 32767: ay -= 65536
+    az = (data[4] << 8 | data[5])
+    if az > 32767: az -= 65536
+    # Convert to g (assuming ±2g range, 16384 LSB/g)
+    ax = ax / 16384.0
+    ay = ay / 16384.0
+    az = az / 16384.0
+    return ax, ay, az
+
+# ==================== Main Program ====================
+print("\n=== Waveshare Environment Sensor ===\n")
+print("Initializing sensors...")
+
+# Initialize all sensors
+try:
+    tsl2591_init()
+    print("✓ TSL2591 (Light) initialized")
+except:
+    print("✗ TSL2591 initialization failed")
+
+try:
+    bme280_init()
+    bme_cal = read_bme280_calibration()
+    print("✓ BME280 (Temp/Humidity/Pressure) initialized")
+except:
+    print("✗ BME280 initialization failed")
+
+try:
+    ltr390_init()
+    print("✓ LTR390 (UV) initialized")
+except:
+    print("✗ LTR390 initialization failed")
+
+try:
+    icm20948_init()
+    print("✓ ICM20948 (Accelerometer) initialized")
+except:
+    print("✗ ICM20948 initialization failed")
+
+print("✓ SGP40 (VOC) ready\n")
+print("Starting continuous readings...\n")
+time.sleep(1)
+
+# Main reading loop
+while True:
+    print("=" * 50)
+    print(f"Time: {time.ticks_ms() / 1000:.1f}s\n")
+    
+    # Light (Visible + IR)
+    try:
+        visible, ir = read_tsl2591()
+        print(f"Visible Light: {visible} counts")
+        print(f"IR Light:      {ir} counts")
+    except:
+        print("Light: Error reading")
+    
+    # Temperature, Humidity, Pressure
+    try:
+        temp, pressure, humidity = read_bme280(bme_cal)
+        print(f"Temperature:   {temp:.2f} °C")
+        print(f"Humidity:      {humidity:.2f} %")
+        print(f"Pressure:      {pressure:.2f} hPa")
+    except:
+        print("BME280: Error reading")
+    
+    # UV
+    try:
+        uv = read_ltr390()
+        print(f"UV:            {uv} counts")
+    except:
+        print("UV: Error reading")
+    
+    # VOC (Air Quality)
+    try:
+        voc = read_sgp40()
+        print(f"VOC (raw):     {voc}")
+    except:
+        print("VOC: Error reading")
+    
+    # Accelerometer
+    try:
+        ax, ay, az = read_icm20948_accel()
+        print(f"Accel X:       {ax:.3f} g")
+        print(f"Accel Y:       {ay:.3f} g")
+        print(f"Accel Z:       {az:.3f} g")
+    except:
+        print("Accelerometer: Error reading")
+    
+    print()
+    time.sleep(2)  # Wait 2 seconds between readings
