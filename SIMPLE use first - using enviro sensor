@@ -1,0 +1,63 @@
+
+#IMPORTANT
+#bme280.py
+#tsl2591.py
+#ltr390.py
+#icm20948.py
+#sgp40.py
+
+#U MUST dowload and install these drivers onto the rasberry pico itself
+#installing these is a bit tedious - :(
+#just as CHATGPT how to install them or something or go on youtube
+
+
+#the code will work IF AND ONLY IF the correct drivers u install match the exact class names and functions used in your code.
+
+
+from machine import I2C, Pin
+import time
+
+# sensor drivers (must be on Pico filesystem in /lib)
+import bme280
+import icm20948
+import ltr390
+import tsl2591
+import sgp40
+
+i2c = I2C(0, scl=Pin(5), sda=Pin(4), freq=400000)
+
+# init sensors
+bme = bme280.BME280(i2c=i2c)
+imu = icm20948.ICM20948(i2c)
+uv  = ltr390.LTR390(i2c)
+als = tsl2591.TSL2591(i2c)
+voc = sgp40.SGP40(i2c)
+
+print("Starting measurement loop...")
+
+while True:
+    # Temperature, humidity, pressure
+    temp, pres, hum = bme.read_compensated_data()
+    
+    # Light & IR
+    lux, ir = als.read()   # visible (lux) & IR
+    
+    # UV index
+    uv_index = uv.read_uv()
+    
+    # VOC (scaled value)
+    voc_val = voc.measure_raw()
+    
+    # Accelerometer
+    ax, ay, az = imu.acceleration()
+    
+    print("Temp: %.2f C   Humidity: %.2f%%   Pressure: %.2f hPa" %
+          (temp, hum, pres))
+    print("Visible Lux: %d   IR: %d   UV: %d" %
+          (lux, ir, uv_index))
+    print("VOC Raw:", voc_val)
+    print("Accel X,Y,Z:", ax, ay, az)
+    print("-------------------------------")
+    
+    time.sleep(1)
+
