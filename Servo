@@ -1,1 +1,27 @@
+from machine import Pin, PWM
+from time import sleep
+
+# pin set up - example change the pin number based on ur diagram and wiring set up.
+servo = PWM(Pin(15))
+servo.freq(50)  # 50 Hz for most servos
+
+# Helper function to move servo
+def set_angle(angle):
+
+    min_duty = 1638
+    max_duty = 8192
+    duty = int(min_duty + (angle / 180) * (max_duty - min_duty))
+    servo.duty_u16(duty)
+
+# Sweep
+while True:
+    for angle in range(0, 181, 5):  # 0 → 180
+        set_angle(angle)
+        sleep(0.02)
+
+    for angle in range(180, -1, 5):  # 180 → 0
+        set_angle(angle)
+        sleep(0.02)
+        
+#relitvly simple - u can change it or write ur self probs if error
 
