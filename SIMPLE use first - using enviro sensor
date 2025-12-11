@@ -1,10 +1,10 @@
 
 #IMPORTANT
-#bme280.py
-#tsl2591.py
-#ltr390.py
-#icm20948.py
-#sgp40.py
+#bme280.py - temp, humidity and air pressure
+#tsl2591.py - visible light and ir light
+#ltr390.py - UV sesnor
+#icm20948.py - 3 axis accelermoter 
+#sgp40.py - VOC
 
 #U MUST dowload and install these drivers onto the rasberry pico itself
 #installing these is a bit tedious - :(
