@@ -12,7 +12,7 @@
 
 
 #the code will work IF AND ONLY IF the correct drivers u install match the exact class names and functions used in your code.
-
+#in short - find the drivers on github, copy paste the driver code into THONNY, save the code on the PICO - done.
 
 from machine import I2C, Pin
 import time
