@@ -248,8 +248,8 @@ def send_over_lora(temp, humidity, pressure, uv, voc, ax, ay, az):
         f"VOC:{voc},"
         f"AX:{ax:.2f},"
         f"AY:{ay:.2f},"
-        f"AZ:{az:.2f}"
-        f"IR:{ir}"
+        f"AZ:{az:.2f},"
+        f"IR:{ir}",
     )
 
     lora.send(packet.encode("utf-8"))
@@ -320,7 +320,7 @@ while True:
         send_over_lora(
             temp, humidity, pressure,
             uv, voc,
-            ax, ay, az
+            ax, ay, az,
             visible, ir
         )
     except:
