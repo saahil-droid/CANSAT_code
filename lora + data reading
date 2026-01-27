@@ -239,7 +239,7 @@ time.sleep(1)
 
 #----------------------------------------------------------------------------------------------------------------
 
-def send_over_lora(temp, humidity, pressure, uv, voc, ax, ay, az):
+def send_over_lora(temp, humidity, pressure, uv, voc, ax, ay, az, visible, ir):
     packet = (
         f"T:{temp:.2f},"
         f"H:{humidity:.1f},"
@@ -249,7 +249,8 @@ def send_over_lora(temp, humidity, pressure, uv, voc, ax, ay, az):
         f"AX:{ax:.2f},"
         f"AY:{ay:.2f},"
         f"AZ:{az:.2f},"
-        f"IR:{ir}",
+        f"V:{visible},"
+        f"IR:{ir}"
     )
 
     lora.send(packet.encode("utf-8"))
