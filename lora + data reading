@@ -39,7 +39,7 @@ lora = LoRa(                              #SX127x(  << before
     spi,
     cs=Pin(12, Pin.OUT),
     rx=None,  # ← Set to None since no DIO0 pin available
-    frequency=433E6,#<<<<----------------------------------------------433 hz frequency
+    frequency=433.0   #433E6,#<<<<----------------------------------------------433 hz frequency
     tx_power=14,
     spreading_factor=7,
     bandwidth=125000,
