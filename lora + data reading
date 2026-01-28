@@ -34,7 +34,7 @@ lora_pins = {
     'dio0': Pin(26, Pin.IN)
 }
 
-lora = SX127x(
+lora = LoRa(                              #SX127x(  << before
     spi,
     cs=Pin(12, Pin.OUT),
     rx=None,  # ← Set to None since no DIO0 pin available
