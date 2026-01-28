@@ -6,7 +6,8 @@
 
 from machine import Pin, I2C
 from machine import SPI
-from sx127x import SX127x
+
+#from sx127x import SX127x
 from lora import LoRa
 import time
 
