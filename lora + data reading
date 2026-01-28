@@ -28,7 +28,7 @@ spi = SPI(
 )
 
 lora_pins = {
-    'cs': Pin(17, Pin.OUT),
+    'cs': Pin(16, Pin.OUT),
     'reset': Pin(14, Pin.OUT),
     'dio0': Pin(26, Pin.IN)
 }
