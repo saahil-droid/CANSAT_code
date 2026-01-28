@@ -22,14 +22,14 @@ spi = SPI(
     phase=0,
     bits=8,
     firstbit=SPI.MSB,
-    sck=Pin(13), #physical pin 17
+    sck=Pin(13), #physical pin 17 
     mosi=Pin(15), #physical pin 20
     miso=Pin(14) #physical pin 19
 )
 
 lora_pins = {
     'cs': Pin(12, Pin.OUT),#physical pin 16
-    #'reset': Pin(14, Pin.OUT),
+    #'reset': Pin(14, Pin.OUT), --> try 'reset': None, orrrrrrrrrrr 
     'dio0': Pin(26, Pin.IN)
 }
 
