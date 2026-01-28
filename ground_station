@@ -21,7 +21,7 @@ lora = LoRa(
     spi,
     cs=cs,
     rx=None,                # no DIO0
-    frequency=433e6,        # match sender
+    frequency=433.0,        # match sender
     spreading_factor=7,
     bandwidth=125000,
     coding_rate=5,
