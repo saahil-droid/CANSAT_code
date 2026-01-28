@@ -35,20 +35,17 @@ lora_pins = {
 
 lora = SX127x(
     spi,
-    pins=lora_pins,
-    parameters={
-        'frequency': 433E6,        # RFM9x @ 433 MHz<---------------------------------------------------------
-        'tx_power_level': 14,
-        'signal_bandwidth': 125E3,
-        'spreading_factor': 7,
-        'coding_rate': 5,
-        'preamble_length': 8,
-        'implicit_header': False,
-        'sync_word': 0x12,
-        'enable_CRC': True
-    }
+    cs=Pin(12, Pin.OUT),
+    rx=None,  # ← Set to None since no DIO0 pin available
+    frequency=433E6,#<<<<----------------------------------------------433 hz frequency
+    tx_power=14,
+    spreading_factor=7,
+    bandwidth=125000,
+    coding_rate=5,
+    preamble_length=8,
+    crc=False,
+    sync_word=0x12
 )
-
 print("✓ LoRa radio initialized")
 
 
