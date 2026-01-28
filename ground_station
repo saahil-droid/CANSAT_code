@@ -1,0 +1,44 @@
+
+from machine import SPI, Pin
+from lora import LoRa
+from time import sleep
+
+# ---- SPI using your physical pins ----
+spi = SPI(
+    1,
+    baudrate=5_000_000,
+    polarity=0,
+    phase=0,
+    sck=Pin(13),    # physical 17
+    mosi=Pin(15),   # physical 20
+    miso=Pin(14)    # physical 19
+)
+
+cs = Pin(12, Pin.OUT)     # physical 16
+
+# ---- LoRa setup (rx=None because no DIO0) ----
+lora = LoRa(
+    spi,
+    cs=cs,
+    rx=None,                # no DIO0
+    frequency=433e6,        # match sender
+    spreading_factor=7,
+    bandwidth=125000,
+    coding_rate=5,
+    crc=False               # off for simplicity
+)
+
+print("LoRa ground station polling for packets...")
+
+lora.recv()  # put LoRa in continuous RX mode
+
+while True:
+    # check if any packet has arrived
+    irq_flags = lora._get_irq_flags()   # internal method
+    if irq_flags & 0x40:  # RX_DONE
+        payload = lora._read_payload()
+        try:
+            print("Received:", payload.decode())
+        except:
+            print("Received (raw):", payload)
+    sleep(0.1)  # small delay to reduce CPU load
