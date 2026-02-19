@@ -1,0 +1,57 @@
+#detecting if the cansat is going UP, DOWN, ON THE GROUND
+
+
+#important:
+
+#Get the ICM20948 MicroPython driver
+#The line from icm20948 import ICM20948 won't work until you have the driver file on your Pico. to do this:
+
+#Go to the Waveshare wiki for the board and download their example code (search "Waveshare Pico Environment Sensor wiki") or the one on the product page
+#Find the file called icm20948.py
+#Copy it onto your Pico using Thonny (File → Save to Pico, put it in the root /)
+#it shant work is this is not done
+
+
+import time
+from machine import Pin, I2C
+from icm20948 import ICM20948
+
+# Confirmed pins from your pinout diagram
+i2c = I2C(1, sda=Pin(20), scl=Pin(21), freq=400000)
+imu = ICM20948(i2c)
+
+# ±2g range: 1g = 16384 raw units
+SCALE = 16384.0
+
+# Thresholds (in g)
+FREEFALL_THRESHOLD = 0.3   # near 0g = dropped / falling
+LAUNCH_THRESHOLD   = 1.5   # well above 1g = rocket thrust pushing up
+STILL_LOW          = 0.85
+STILL_HIGH         = 1.15
+
+def get_state(az_g):
+    if az_g < FREEFALL_THRESHOLD:
+        return " 🔻FALLING / FREEFALL"
+    elif az_g > LAUNCH_THRESHOLD:
+        return " 🔼 GOING UP (launched!)"
+    elif STILL_LOW <= az_g <= STILL_HIGH:
+        return "⏸  STILL"
+    else:
+        return "↕  MOVING (low)"
+
+# Main loop
+while True:
+    ax_raw, ay_raw, az_raw = imu.read_accelerometer_data()
+    
+    az_g = az_raw / SCALE  # convert to g
+    
+    state = get_state(az_g)
+    print(f"Z: {az_g:.3f}g  |  {state}")
+    
+    time.sleep(0.1)
+    
+    #WHAT WILL THIS DO:
+    
+    #Z: 0.998g  |  STILL
+    #Z: 0.012g  |  🔻 FALLING / FREEFALL
+    #Z: 1.823g  |  🔼GOING UP (launched!)
