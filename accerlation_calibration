@@ -1,0 +1,27 @@
+ #lil calibration test
+
+# Quick calibration check - run this first, hold the board still
+import time
+from machine import Pin, I2C
+from icm20948 import ICM20948
+
+i2c = I2C(1, sda=Pin(20), scl=Pin(21), freq=400000)
+imu = ICM20948(i2c)
+
+SCALE = 16384.0
+
+print("Hold the board STILL for 3 seconds...")
+time.sleep(1)
+
+for i in range(20):
+    ax, ay, az = imu.read_accelerometer_data()
+    print(f"X:{ax/SCALE:.3f}g  Y:{ay/SCALE:.3f}g  Z:{az/SCALE:.3f}g")
+    time.sleep(0.15)
+    
+    
+    
+#what to look for:
+    #Z should read close to 1.0g or -1.0g (depending on which way up the board is)
+    #If Z reads ~-1.0g, flip the sign in get_state: use az_g = -(az_raw / SCALE)
+    #X and Y should be close to 0.0g
+    
